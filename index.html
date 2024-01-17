@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KIF Image Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        canvas {
+            border: 1px solid black;
+            max-width: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .slider {
+            width: 80%;
+            margin-bottom: 10px;
+        }
+        .btn {
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .apply-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+        .reset-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+        }
+        .download-btn {
+            background-color: #008CBA;
+            color: white;
+            border: none;
+        }
+        .btn:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <!-- New input for image file -->
+        <input type="file" accept=".png, .jpg, .jpeg" id="imageFileInput">
+        <!-- Your existing controls -->
+        <input type="range" min="1" max="20" value="1" class="slider" id="scaleSlider">
+        <button class="btn apply-btn" onclick="applyScale()">Apply</button>
+        <button class="btn reset-btn" onclick="resetScale()">Reset</button>
+        <button class="btn download-btn" onclick="downloadKIF()">Download KIF</button>
+    </div>
+    <canvas id="imageCanvas"></canvas>
+
+    <script>
+        let scaleFactor = 1;
+        let kifContent = "";
+
+        function applyScale() {
+            scaleFactor = document.getElementById('scaleSlider').value;
+            displayKIF();
+        }
+
+        function resetScale() {
+            scaleFactor = 1;
+            document.getElementById('scaleSlider').value = 1;
+            displayKIF();
+        }
+
+        function displayKIF() {
+            const imageCanvas = document.getElementById('imageCanvas');
+            const ctx = imageCanvas.getContext('2d');
+
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const scaledWidth = img.width * scaleFactor;
+                    const scaledHeight = img.height * scaleFactor;
+
+                    imageCanvas.width = scaledWidth;
+                    imageCanvas.height = scaledHeight;
+
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, scaledWidth, scaledHeight);
+
+                    ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+
+                    // Convert to KIF format and store
+                    convertToKIF(imageCanvas.toDataURL('image/png'));
+                };
+
+                img.src = event.target.result;
+            };
+
+            const fileInput = document.getElementById('imageFileInput');
+            const selectedFile = fileInput.files[0];
+            if (selectedFile) {
+                reader.readAsDataURL(selectedFile);
+            }
+        }
+
+        function convertToKIF(dataURL) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            const img = new Image();
+
+            img.onload = function () {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                context.drawImage(img, 0, 0, img.width, img.height);
+
+                const imageData = context.getImageData(0, 0, img.width, img.height).data;
+
+                // Create KIF content
+                kifContent = `${img.width} ${img.height}\n`;
+
+                for (let i = 0; i < imageData.length; i += 4) {
+                    const r = imageData[i];
+                    const g = imageData[i + 1];
+                    const b = imageData[i + 2];
+                    kifContent += `${r} ${g} ${b}\n`;
+                }
+            };
+
+            img.src = dataURL;
+        }
+
+        function downloadKIF() {
+            if (kifContent) {
+                const blob = new Blob([kifContent], { type: 'text/plain' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'generated_image.kif';
+                link.click();
+            }
+        }
+
+        document.getElementById('imageFileInput').addEventListener('change', function() {
+            displayKIF();
+        });
+
+        window.onload = displayKIF;
+    </script>
+</body>
+</html>
